@@ -1,4 +1,4 @@
-package own.star.wheel.core.model
+package own.star.wheel.core.run.model
 
 /**
  * @author xinsheng

@@ -1,6 +1,6 @@
 package com.alibaba.service.keep.model
 
-import own.star.wheel.core.model.ExecutionStatus
+import own.star.wheel.core.run.model.ExecutionStatus
 
 
 /**

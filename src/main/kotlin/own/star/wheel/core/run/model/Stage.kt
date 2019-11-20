@@ -1,8 +1,10 @@
 package com.alibaba.service.keep.model
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import org.springframework.util.CollectionUtils
-import own.star.wheel.core.model.Execution
-import own.star.wheel.core.model.ExecutionStatus
+import own.star.wheel.core.run.model.Execution
+import own.star.wheel.core.run.model.ExecutionStatus
+import java.sql.Time
 import java.util.LinkedList
 
 /**
@@ -10,25 +12,32 @@ import java.util.LinkedList
  * @date 2019/11/12
  */
 
-class Stage {
+class Stage() {
 
     lateinit var id: String
+
     lateinit var refId: String
     lateinit var type: String
     lateinit var name: String
 
+
+    /**
+     * 实例数据, 可以为空
+     */
+    var instanceId: String? = null
+
     var execution: Execution? = null
     var context: HashMap<String, Any> = LinkedHashMap<String, Any>()
-    val output: HashMap<String, Any> = LinkedHashMap<String, Any>()
+    var output: HashMap<String, Any> = LinkedHashMap<String, Any>()
 
-    var required: List<String> = LinkedList<String>()
-    var startTime: Long? = null
-    var endTime: Long? = null
+    var required: List<String>? = null
+    var startTime: Time? = null
+    var endTime: Time? = null
     var status: ExecutionStatus = ExecutionStatus.NOT_STARTED
 
 
     open fun upstreamStages(): List<Stage> {
-        return execution!!.stages.filter { required.contains(it.refId) }.toList()
+        return execution!!.stages!!.filter { required!!.contains(it.refId) }.toList()
     }
 
     open fun allUpstreamSuccess(): Boolean {
@@ -36,10 +45,10 @@ class Stage {
     }
 
     open fun downstreamStages(): List<Stage> {
-        return execution!!.stages.filter { it.required.contains(refId) }.toList()
+        return execution!!.stages!!.filter { it.required!!.contains(refId) }.toList()
     }
 
-    open fun isInitial(): Boolean {
+    open fun initial(): Boolean {
         return CollectionUtils.isEmpty(required)
     }
 
@@ -47,7 +56,7 @@ class Stage {
      * 没有正逆序关系, 直接拿
      */
     fun getOutput(key: String): Any? {
-        return execution!!.stages.first { it.output.containsKey(key) }.output.get(key)
+        return execution!!.stages!!.first { it.output.containsKey(key) }.output.get(key)
     }
 
 }
