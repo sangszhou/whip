@@ -9,6 +9,17 @@ CREATE TABLE `pipeline_template` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
  
+CREATE TABLE `execution` (
+  `id` varchar(256) NOT NULL,
+  `gmt_create` datetime NOT NULL,
+  `gmt_modified` datetime NOT NULL,
+  `template_id` varchar(256) NOT NULL,
+  `status` varchar(128) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+
 -- 需要添加 index
 -- CREATE TABLE pipeline (
 --   id             INT          NOT NULL PRIMARY KEY,

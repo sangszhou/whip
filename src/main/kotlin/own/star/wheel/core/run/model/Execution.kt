@@ -14,24 +14,23 @@ class Execution() {
      * template definition
      */
     lateinit var id: String
+    lateinit var template_id: String
     lateinit var name: String
-    var triggerInterval: Long? = null
     var stages: List<Stage>? = ArrayList()
 
     /**
      * runtime definition
      */
-    var instanceId: String? = null
     var startTime: Time? = null
     var endTime: Time? = null
-    var executionStatus = ExecutionStatus.NOT_STARTED
+    var status = ExecutionStatus.NOT_STARTED
 
     fun initialStages(): List<Stage> {
         return stages!!.stream().filter{ it.initial() }.toList()
     }
 
     fun isCompleted(): Boolean {
-        return executionStatus == ExecutionStatus.SUCCEEDED || executionStatus == ExecutionStatus.FAILED
+        return status == ExecutionStatus.SUCCEEDED || status == ExecutionStatus.FAILED
     }
 
 }

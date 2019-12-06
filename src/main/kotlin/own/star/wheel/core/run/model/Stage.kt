@@ -14,17 +14,19 @@ import java.util.LinkedList
 
 class Stage() {
 
+    /**
+     * 模板数据
+     */
     lateinit var id: String
-
     lateinit var refId: String
     lateinit var type: String
     lateinit var name: String
-
 
     /**
      * 实例数据, 可以为空
      */
     var instanceId: String? = null
+    var executionId: String? = null
 
     var execution: Execution? = null
     var context: HashMap<String, Any> = LinkedHashMap<String, Any>()

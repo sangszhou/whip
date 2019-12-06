@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import own.star.wheel.core.run.dao.PipelineTemplateDao
+import own.star.wheel.core.run.dao.mysql.PipelineTemplateDao
 import own.star.wheel.core.run.model.Execution
 import javax.annotation.PostConstruct
 
@@ -35,7 +35,7 @@ class DbController {
     fun upsertPipeline(@RequestBody exe: Execution): String {
         log.info("upsert execution {}", mapper.writeValueAsString(exe))
         try {
-            pipelineTemplateDao.upsertExecution(exe)
+            pipelineTemplateDao.upsertPipelineTemplate(exe)
         } catch (exp: Exception) {
             log.info("failed to save to db", exp)
             return exp.message!!

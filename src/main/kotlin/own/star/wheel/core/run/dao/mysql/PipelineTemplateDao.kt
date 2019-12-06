@@ -1,4 +1,4 @@
-package own.star.wheel.core.run.dao
+package own.star.wheel.core.run.dao.mysql
 
 import com.alibaba.service.keep.model.Stage
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -11,10 +11,13 @@ import org.jooq.exception.SQLDialectNotSupportedException
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.field
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
+import org.springframework.util.CollectionUtils
+import org.springframework.util.StringUtils
 import org.springframework.web.bind.annotation.RestController
 import own.star.wheel.core.run.model.Execution
 import own.star.wheel.core.run.model.ExecutionStatus
+import own.star.wheel.core.run.model.PipelineTemplate
+import java.lang.IllegalArgumentException
 import java.lang.System.currentTimeMillis
 import java.sql.ResultSet
 import java.util.Date
@@ -29,8 +32,15 @@ import javax.annotation.PostConstruct
 class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    val pipelineTable = "pipeline_template"
-    val pipelineInstance = "pipeline"
+    val pipelineTemplateTable = "pipeline_template"
+    /**
+     * pipeline template 的一次执行叫做 execution
+     */
+    val pipelineInstanceTable = "execution"
+    /**
+     * stage 不缺分 template 和 instance, 都是 instance
+     * 因为 template 的定义在 pipeline 中已经存在了
+     */
     val stage = "stage"
 
     @PostConstruct
@@ -38,8 +48,8 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         log.info("making pipeline template dao")
     }
 
-    fun retrievePipelineTemplate(id: String): Execution? {
-        val table = DSL.table(pipelineTable)
+    fun retrievePipelineTemplate(id: String): PipelineTemplate? {
+        val table = DSL.table(pipelineTemplateTable)
         val resultSet = dslContext
             .select(field("content"))
             .from(table)
@@ -47,17 +57,19 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             .fetch().intoResultSet()
 
         if (resultSet.next()) {
-            val execution = mapper.readValue<Execution>(resultSet.getString("content"))
-            return execution
+            val template = mapper.readValue<PipelineTemplate>(resultSet.getString("content"))
+            return template
         }
+
         return null
     }
 
     /**
      * 获取所有的 stage 和 execution instance 信息
+     * execution 是 pipeline 的一次运行
      */
-    fun retrieveExecution(instanceId: String): Execution {
-        val pipelineInstanceTbl = DSL.table(pipelineInstance)
+    fun retrievePipelineExe(instanceId: String): Execution {
+        val pipelineInstanceTbl = DSL.table(pipelineInstanceTable)
         val stageInstanceTbl = DSL.table(stage)
 
         // 获取 stage instance 信息
@@ -67,8 +79,6 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             .fetch().intoResultSet()
 
         val execution = mapResultToExecution(resultSet)
-
-        // TODO 如果没有的话该怎么处理呢?
 
         val stageList = retrieveExecutionStage(instanceId)
 
@@ -141,17 +151,17 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
     /**
      * 插入的是实例
      */
-    fun upsertExexuctionInstance(execution: Execution, storeStage: Boolean) {
-        val pipelineInstanceTbl = DSL.table(pipelineInstance)
+    fun upsertExecution(execution: Execution, storeStage: Boolean) {
+        val pipelineInstanceTbl = DSL.table(pipelineInstanceTable)
         val stageInstanceTbl = DSL.table(stage)
 
-        val stageDef = execution.stages
+        val stageData = execution.stages
         execution.stages = null
 
 //        Random(currentTimeMillis()).nextInt()
         val insertPairs = mapOf(
-            field("id") to execution.instanceId,
-            field("template_id") to execution.id,
+            field("id") to execution.id,
+            field("template_id") to execution.template_id,
             field("start_time") to currentTimeMillis(),
             field("status") to ExecutionStatus.NOT_STARTED.toString())
 
@@ -160,22 +170,25 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
          */
         val updatePairs = mapOf(
             DSL.field("end_time") to execution.endTime,
-            DSL.field("status") to execution.executionStatus
+            DSL.field("status") to execution.status
         )
 
-        upsert(dslContext, pipelineInstanceTbl, insertPairs, updatePairs, execution.instanceId!!)
+        upsert(dslContext, pipelineInstanceTbl, insertPairs, updatePairs, execution.id!!)
 
         // 插入到 stage 中, 不需要考虑 update stage 的情况
         if (!storeStage) {
+            log.info("upsert execution without storing stages")
             return
         }
 
         dslContext.deleteFrom(stageInstanceTbl)
-            .where(field("").eq(execution.instanceId))
+            .where(field("execution_id").eq(execution.id))
             .execute()
 
-        //
-        stageDef!!.forEach { storeStage(it) }
+        /**
+         * stage 必须要存在的, 所以用!也行
+         */
+        stageData?.forEach { storeStage(it) }
     }
 
     fun storeStage(stageDef: Stage) {
@@ -185,9 +198,10 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             field("id") to stageDef.id,
             field("instance_id") to stageDef.instanceId,
             field("ref_id") to stageDef.refId,
-            field("exe_id") to stageDef.execution!!.instanceId,
+            field("exe_id") to stageDef.execution!!.id,
             field("type") to stageDef.type,
             field("name") to stageDef.name,
+
             field("context") to mapper.writeValueAsString(stageDef.context),
             field("context") to mapper.writeValueAsString(stageDef.context),
             field("output") to mapper.writeValueAsString(stageDef.output),
@@ -209,34 +223,52 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
     }
 
     /**
+     * 首先要, validate 格式是否正确
      * 拆解成对 pipeline 和 stages 的存储两部分
      * execution 是静态额
      */
-    fun upsertExecution(execution: Execution) {
-        val table = DSL.table(pipelineTable)
-        val content = mapper.writeValueAsString(execution)
+    fun upsertPipelineTemplate(template: PipelineTemplate) {
+        validatePipelineTemplate(template)
+
+        val table = DSL.table(pipelineTemplateTable)
+        val content = mapper.writeValueAsString(template)
 
         val insertPairs = mapOf(
-            field("name") to execution.name,
-            field("id") to execution.id,
+            field("name") to template.name,
+            field("id") to template.id,
             field("gmt_create") to Date(),
             field("gmt_modified") to Date(),
-            field("trigger_interval") to execution.triggerInterval,
+            field("trigger_interval") to template.triggerInterval,
             field("content") to content)
 
         val updatePairs = mapOf(
-            DSL.field("name") to execution.name,
+            DSL.field("name") to template.name,
             DSL.field("content") to content,
-            DSL.field("trigger_interval") to execution.triggerInterval,
+            DSL.field("trigger_interval") to template.triggerInterval,
             DSL.field("gmt_modified") to currentTimeMillis()
         )
-
         upsert(dslContext,
             table,
             insertPairs,
             updatePairs,
-            execution.id
+            template.id
         )
+    }
+
+    /**
+     * 校验格式
+     */
+    fun validatePipelineTemplate(template: PipelineTemplate) {
+        if (StringUtils.isEmpty(template.name)) {
+            throw IllegalArgumentException("pipeline template should have name")
+        }
+        if (StringUtils.isEmpty(template.id)) {
+            throw IllegalArgumentException("pipeline template should have id")
+        }
+
+        if (CollectionUtils.isEmpty(template.stages)) {
+            throw IllegalArgumentException("pipeline template should have at least 1 stage")
+        }
     }
 
     private fun upsert(

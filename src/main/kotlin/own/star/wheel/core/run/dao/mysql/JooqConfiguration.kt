@@ -1,4 +1,4 @@
-package own.star.wheel.core.run.controller.test
+package own.star.wheel.core.run.dao.mysql
 
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
