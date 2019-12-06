@@ -154,7 +154,7 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         val stageInstanceTbl = DSL.table(stage)
 
         val stageData = execution.stages
-        execution.stages = null
+//        execution.stages = null
 
         val insertPairs = mapOf(
             field("id") to execution.id,
@@ -186,7 +186,7 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         /**
          * stage 必须要存在的, 所以用!也行
          */
-        stageData?.forEach { storeStage(it) }
+        stageData.forEach { storeStage(it) }
     }
 
     /**

@@ -1,5 +1,6 @@
 package own.star.wheel.core.run.service
 
+import com.alibaba.service.keep.model.Stage
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import own.star.wheel.core.run.dao.mysql.PipelineTemplateDao
@@ -12,6 +13,18 @@ import java.util.UUID
 @Service
 class ExecutionService(val pipelineTemplateDao: PipelineTemplateDao) {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    fun getExecution(id: String): Execution {
+        return pipelineTemplateDao.retrievePipelineExe(id)
+    }
+
+    fun updateExecution(execution: Execution) {
+        return pipelineTemplateDao.upsertExecution(execution, false)
+    }
+
+    fun saveStage(stg: Stage) {
+        return pipelineTemplateDao.storeStage(stg)
+    }
 
     fun savePipelineTemplate(template: PipelineTemplate) {
         try {
@@ -44,7 +57,7 @@ class ExecutionService(val pipelineTemplateDao: PipelineTemplateDao) {
             execution.stages = pipelineTemplate.stages
 
             // 别忘记了 对于 stage 的初始化操作, 这个可以再优化一些
-            execution.stages?.forEach {
+            execution.stages.forEach {
                 it.execution = execution
                 it.instanceId = UUID.randomUUID().toString()
                 it.status = ExecutionStatus.NOT_STARTED

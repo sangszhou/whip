@@ -5,6 +5,7 @@ import org.springframework.util.CollectionUtils
 import own.star.wheel.core.run.model.Execution
 import own.star.wheel.core.run.model.ExecutionStatus
 import java.sql.Time
+import java.util.Date
 import java.util.LinkedList
 
 /**
@@ -33,8 +34,8 @@ class Stage() {
     var output: HashMap<String, Any> = LinkedHashMap<String, Any>()
 
     var required: List<String>? = null
-    var startTime: Time? = null
-    var endTime: Time? = null
+    var startTime: Date? = null
+    var endTime: Date? = null
     var status: ExecutionStatus = ExecutionStatus.NOT_STARTED
 
 

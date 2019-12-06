@@ -17,7 +17,7 @@ class Execution() {
     lateinit var id: String
     lateinit var templateId: String
     lateinit var name: String
-    var stages: List<Stage>? = ArrayList()
+    var stages: List<Stage> = ArrayList()
 
     /**
      * runtime definition
@@ -27,7 +27,7 @@ class Execution() {
     var status = ExecutionStatus.NOT_STARTED
 
     fun initialStages(): List<Stage> {
-        return stages!!.stream().filter{ it.initial() }.toList()
+        return stages.stream().filter{ it.initial() }.toList()
     }
 
     fun isCompleted(): Boolean {

@@ -7,5 +7,5 @@ class PipelineTemplate {
     lateinit var id: String
     lateinit var name: String
     var triggerInterval: Long? = null
-    var stages: List<Stage>? = ArrayList()
+    var stages: List<Stage> = ArrayList()
 }

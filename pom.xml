@@ -25,6 +25,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.netflix.spinnaker.keiko</groupId>
+            <artifactId>keiko-core</artifactId>
+            <version>2.14.2</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
