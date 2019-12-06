@@ -24,9 +24,25 @@
     <version>1.0-SNAPSHOT</version>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.netflix.spinnaker.kork/kork-core -->
+<!--        <dependency>-->
+<!--            <groupId>com.netflix.spinnaker.kork</groupId>-->
+<!--            <artifactId>kork-core</artifactId>-->
+<!--            <version>6.21.0</version>-->
+<!--            <scope>runtime</scope>-->
+<!--        </dependency>-->
+
+        <!-- https://mvnrepository.com/artifact/org.codehaus.groovy/groovy-all -->
+
         <dependency>
             <groupId>com.netflix.spinnaker.keiko</groupId>
             <artifactId>keiko-core</artifactId>
+            <version>2.14.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.spinnaker.keiko</groupId>
+            <artifactId>keiko-sql</artifactId>
             <version>2.14.2</version>
         </dependency>
         <dependency>
@@ -44,11 +60,11 @@
             <version>2.14.2</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.netflix.spinnaker.keiko</groupId>
-            <artifactId>keiko-mem</artifactId>
-            <version>2.14.2</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.netflix.spinnaker.keiko</groupId>-->
+<!--            <artifactId>keiko-mem</artifactId>-->
+<!--            <version>2.14.2</version>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>mysql</groupId>
@@ -111,8 +127,18 @@
             <artifactId>jackson-module-kotlin</artifactId>
             <version>2.10.1</version>
         </dependency>
-
     </dependencies>
+
+<!--    <dependencyManagement>-->
+<!--        <dependencies>-->
+<!--            <dependency>-->
+<!--                <groupId>org.codehaus.groovy</groupId>-->
+<!--                <artifactId>groovy-all</artifactId>-->
+<!--                <version>2.5.7</version>-->
+<!--                <type>pom</type>-->
+<!--            </dependency>-->
+<!--        </dependencies>-->
+<!--    </dependencyManagement>-->
 
     <build>
         <plugins>

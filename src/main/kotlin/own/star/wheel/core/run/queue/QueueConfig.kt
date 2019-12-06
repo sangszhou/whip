@@ -2,6 +2,8 @@ package own.star.wheel.core.run.queue
 
 import com.alibaba.service.keep.provider.queue.DumbDeadMsgCb
 import com.alibaba.service.keep.provider.queue.EnabledActivator
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.config.SqlQueueConfiguration
 import com.netflix.spinnaker.q.Activator
 import com.netflix.spinnaker.q.DeadMessageCallback
 import com.netflix.spinnaker.q.MessageHandler
@@ -11,13 +13,17 @@ import com.netflix.spinnaker.q.QueueProcessor
 import com.netflix.spinnaker.q.memory.InMemoryQueue
 import com.netflix.spinnaker.q.metrics.EventPublisher
 import com.netflix.spinnaker.q.metrics.QueueEvent
+import com.netflix.spinnaker.q.sql.SqlQueue
+import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import java.time.Duration
 import java.util.LinkedList
+import java.util.Optional
 
 /**
  * @author xinsheng
@@ -64,13 +70,29 @@ open class QueueConfig {
     }
 
     @Bean
-    open fun makeQueue(publisher: EventPublisher): Queue {
+    open fun makeImMemQueue(publisher: EventPublisher): Queue {
         val clock = MutableClock();
         return InMemoryQueue(clock,
             Duration.ofMinutes(1), LinkedList<DeadMessageCallback>(),
             false, publisher);
     }
 
+    @Primary
+    @Bean
+    open fun makeSqlMemQueue(publisher: EventPublisher,
+                             dslContext: DSLContext,
+                             mapper: ObjectMapper): Queue {
+        val clock = MutableClock();
+        val queueName = "sqlQueue"
+        val lockTtlTime = 100
+        return SqlQueue(queueName,
+            SqlQueueConfiguration.SCHEMA_VERSION,
+            dslContext,
+            clock, lockTtlTime, mapper,  Optional.empty(),
+            deadMessageHandlers = LinkedList<DeadMessageCallback>(),
+            publisher = publisher,
+            sqlRetryProperties = com.netflix.spinnaker.kork.sql.config.SqlRetryProperties())
+    }
 
     @Bean
     open fun makeDeadMessageCallback(): DeadMessageCallback {
