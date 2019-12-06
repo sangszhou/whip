@@ -11,6 +11,7 @@ import org.jooq.exception.SQLDialectNotSupportedException
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.field
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import org.springframework.util.CollectionUtils
 import org.springframework.util.StringUtils
 import org.springframework.web.bind.annotation.RestController
@@ -28,7 +29,7 @@ import javax.annotation.PostConstruct
  * @author xinsheng
  * @date 2019/11/19
  */
-@RestController
+@Service
 class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -79,9 +80,7 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             .fetch().intoResultSet()
 
         val execution = mapResultToExecution(resultSet)
-
         val stageList = retrieveExecutionStage(instanceId)
-
         execution!!.stages = stageList
 
         return execution
@@ -92,7 +91,7 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
 
         val resultSet = dslContext.select(field("*"))
             .from(stageInstanceTbl)
-            .where(field("exe_id").eq(exeId))
+            .where(field("execution_id").eq(exeId))
             .fetch().intoResultSet()
 
         val listStage = LinkedList<Stage>()
@@ -119,10 +118,10 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         if (resultSet.next()) {
             val execution = Execution()
             execution.id = resultSet.getString("")
-            execution.instanceId = resultSet.getString("")
-            execution.executionStatus = ExecutionStatus.valueOf(resultSet.getString(""))
-            execution.startTime = resultSet.getTime("")
-            execution.endTime = resultSet.getTime("")
+            execution.templateId = resultSet.getString("template_id")
+            execution.status = ExecutionStatus.valueOf(resultSet.getString("status"))
+            execution.startTime = resultSet.getTime("start_time")
+            execution.endTime = resultSet.getTime("end_time")
 
             return execution
         }
@@ -133,20 +132,19 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         if (resultSet.next()) {
             val stage = Stage()
             stage.id = resultSet.getString("id")
-            stage.instanceId = resultSet.getString("")
-            stage.output = mapper.readValue(resultSet.getString(""))
-            stage.context = mapper.readValue(resultSet.getString(""))
-            stage.required = resultSet.getString("").split(",").toList()
-            stage.startTime = resultSet.getTime("")
-            stage.endTime = resultSet.getTime("")
-            stage.status = ExecutionStatus.valueOf(resultSet.getString(""))
+            stage.instanceId = resultSet.getString("instance_id")
+            stage.output = mapper.readValue(resultSet.getString("output"))
+            stage.context = mapper.readValue(resultSet.getString("context"))
+            stage.required = resultSet.getString("required").split(",").toList()
+            stage.startTime = resultSet.getTime("start_time")
+            stage.endTime = resultSet.getTime("end_time")
+            stage.status = ExecutionStatus.valueOf(resultSet.getString("status"))
 
             return stage
         } else {
             return null
         }
     }
-
 
     /**
      * 插入的是实例
@@ -158,11 +156,11 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         val stageData = execution.stages
         execution.stages = null
 
-//        Random(currentTimeMillis()).nextInt()
         val insertPairs = mapOf(
             field("id") to execution.id,
-            field("template_id") to execution.template_id,
-            field("start_time") to currentTimeMillis(),
+            field("template_id") to execution.templateId,
+            field("start_time") to execution.startTime,
+            field("name") to execution.name,
             field("status") to ExecutionStatus.NOT_STARTED.toString())
 
         /**
@@ -191,6 +189,9 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         stageData?.forEach { storeStage(it) }
     }
 
+    /**
+     * 如果 start time 不存在, 是不是就不需要存储了呢
+     */
     fun storeStage(stageDef: Stage) {
         val stageInstanceTbl = DSL.table(stage)
 
@@ -198,25 +199,23 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             field("id") to stageDef.id,
             field("instance_id") to stageDef.instanceId,
             field("ref_id") to stageDef.refId,
-            field("exe_id") to stageDef.execution!!.id,
+            field("execution_id") to stageDef.executionId,
             field("type") to stageDef.type,
             field("name") to stageDef.name,
 
-            field("context") to mapper.writeValueAsString(stageDef.context),
+            field("execution_id") to stageDef.execution!!.id,
             field("context") to mapper.writeValueAsString(stageDef.context),
             field("output") to mapper.writeValueAsString(stageDef.output),
-            field("start_time") to currentTimeMillis(),
-            field("status") to stageDef.status
+            field("start_time") to stageDef.startTime,
+            field("status") to stageDef.status.name
             )
 
         val updatePair = mapOf(
             field("ref_id") to stageDef.refId,
-            field("type") to stageDef.type,
-            field("name") to stageDef.name,
             field("context") to mapper.writeValueAsString(stageDef.context),
             field("output") to mapper.writeValueAsString(stageDef.output),
-            field("end_time") to currentTimeMillis(),
-            field("status") to stageDef.status
+            field("end_time") to stageDef.endTime,
+            field("status") to stageDef.status.name
         )
 
         upsert(dslContext, stageInstanceTbl, insertPair, updatePair, stageDef.instanceId!!)
@@ -241,12 +240,17 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             field("trigger_interval") to template.triggerInterval,
             field("content") to content)
 
+        log.info("insert pairs: ${insertPairs}")
+
         val updatePairs = mapOf(
             DSL.field("name") to template.name,
             DSL.field("content") to content,
             DSL.field("trigger_interval") to template.triggerInterval,
-            DSL.field("gmt_modified") to currentTimeMillis()
+            DSL.field("gmt_modified") to Date()
         )
+
+        log.info("update pairs: ${updatePairs}")
+
         upsert(dslContext,
             table,
             insertPairs,

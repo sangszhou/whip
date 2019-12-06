@@ -3,6 +3,7 @@ package own.star.wheel.core.run.model
 import com.alibaba.service.keep.model.Stage
 import java.sql.Time
 import java.util.ArrayList
+import java.util.Date
 import kotlin.streams.toList
 
 /**
@@ -14,15 +15,15 @@ class Execution() {
      * template definition
      */
     lateinit var id: String
-    lateinit var template_id: String
+    lateinit var templateId: String
     lateinit var name: String
     var stages: List<Stage>? = ArrayList()
 
     /**
      * runtime definition
      */
-    var startTime: Time? = null
-    var endTime: Time? = null
+    var startTime: Date? = Date()
+    var endTime: Date? = null
     var status = ExecutionStatus.NOT_STARTED
 
     fun initialStages(): List<Stage> {
