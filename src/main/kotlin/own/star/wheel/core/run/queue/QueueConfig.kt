@@ -10,10 +10,8 @@ import com.netflix.spinnaker.q.MessageHandler
 import com.netflix.spinnaker.q.Queue
 import com.netflix.spinnaker.q.QueueExecutor
 import com.netflix.spinnaker.q.QueueProcessor
-import com.netflix.spinnaker.q.memory.InMemoryQueue
 import com.netflix.spinnaker.q.metrics.EventPublisher
 import com.netflix.spinnaker.q.metrics.QueueEvent
-import com.netflix.spinnaker.q.sql.SqlQueue
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -21,6 +19,8 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import own.star.wheel.core.run.queue.config.SqlRetryProperties
+import own.star.wheel.core.run.queue.sql.SqlQueue
 import java.time.Duration
 import java.util.LinkedList
 import java.util.Optional
@@ -69,13 +69,14 @@ open class QueueConfig {
         }
     }
 
-    @Bean
-    open fun makeImMemQueue(publisher: EventPublisher): Queue {
-        val clock = MutableClock();
-        return InMemoryQueue(clock,
-            Duration.ofMinutes(1), LinkedList<DeadMessageCallback>(),
-            false, publisher);
-    }
+//    DO NOT DELETE
+//    @Bean
+//    open fun makeImMemQueue(publisher: EventPublisher): Queue {
+//        val clock = MutableClock();
+//        return InMemoryQueue(clock,
+//            Duration.ofMinutes(1), LinkedList<DeadMessageCallback>(),
+//            false, publisher);
+//    }
 
     @Primary
     @Bean
@@ -91,7 +92,8 @@ open class QueueConfig {
             clock, lockTtlTime, mapper,  Optional.empty(),
             deadMessageHandlers = LinkedList<DeadMessageCallback>(),
             publisher = publisher,
-            sqlRetryProperties = com.netflix.spinnaker.kork.sql.config.SqlRetryProperties())
+            sqlRetryProperties = SqlRetryProperties()
+        )
     }
 
     @Bean
