@@ -8,10 +8,10 @@ import own.star.wheel.core.run.model.ExecutionStatus
  */
 open class TaskResult(var status: ExecutionStatus) {
 
-    constructor(status: ExecutionStatus, outputs: HashMap<String, *>): this(status) {
+    constructor(status: ExecutionStatus, outputs: HashMap<String, Any>): this(status) {
         this.status = status
         this.outputs = outputs
     }
 
-    var outputs: HashMap<String, *>? = null
+    var outputs: HashMap<String, Any>? = null
 }

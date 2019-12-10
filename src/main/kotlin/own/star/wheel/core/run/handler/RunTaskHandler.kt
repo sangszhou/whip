@@ -13,6 +13,7 @@ import own.star.wheel.core.run.model.TaskResult
 import own.star.wheel.core.run.service.ExecutionService
 import own.star.wheel.core.run.task.protocol.TaskRunner
 import java.time.Duration
+import java.util.Date
 
 /**
  * @author xinsheng
@@ -91,14 +92,16 @@ class RunTaskHandler(
      * 更新数据到数据库, 这里并不会放到下一个 stage 中, 在下一个 stage 需要获取的时候, 直接从所有的
      * ancester 中获取即可
      */
-    fun mergeOutputToContext(taskResult: TaskResult, theStage: Stage) {
+    private fun mergeOutputToContext(taskResult: TaskResult, theStage: Stage) {
+        // 及时写入数据库
 
         taskResult.outputs?.let {
             log.info("merge task result: ${taskResult.outputs} to stage: ${theStage.context}")
-            theStage.context.putAll(it)
+            theStage.output = it
             // 及时写入数据库
             executionService.saveStage(theStage)
         }
+
     }
 
 }

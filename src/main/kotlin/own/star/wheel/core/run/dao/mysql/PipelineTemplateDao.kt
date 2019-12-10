@@ -98,9 +98,9 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
 
         val resultSet = dslContext.select(
             field("id"), field("instance_id"), field("ref_id"), field("type"),
-            field("output"), field("context"), field("required"), field("output"),
-            field("name"),
-            field("start_time"), field("end_time"), field("status"), field("execution_id")
+            field("output"), field("context"), field("required"),
+            field("name"), field("start_time"), field("end_time"),
+            field("status"), field("execution_id")
         )
             .from(stageInstanceTbl)
             .where(field("execution_id").eq(execution.id))
@@ -122,7 +122,7 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         val resultSet = dslContext.select(
             field("id"), field("instance_id"), field("ref_id"), field("type"),
             field("execution_id"), field("name"),
-            field("output"), field("context"), field("required"), field("output"),
+            field("output"), field("context"), field("required"),
             field("start_time"), field("end_time"), field("status")
         )
             .from(stageInstanceTbl)
@@ -164,7 +164,7 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         resultSet.getString("output")?.let {  stage.output = mapper.readValue(it)}
         resultSet.getString("context")?.let { stage.context = mapper.readValue(it) }
 
-        stage.required = ArrayList()
+        stage.required = LinkedList()
         resultSet.getString("required")?.let{stage.required = it.split(",").toList()}
 
         stage.startTime = resultSet.getDate("start_time")
@@ -236,7 +236,6 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         )
 
         val updatePair = mapOf(
-            field("ref_id") to stageDef.refId,
             field("context") to mapper.writeValueAsString(stageDef.context),
             field("output") to mapper.writeValueAsString(stageDef.output),
             field("end_time") to stageDef.endTime,

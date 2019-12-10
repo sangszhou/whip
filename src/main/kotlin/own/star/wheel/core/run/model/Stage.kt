@@ -32,7 +32,7 @@ class Stage() {
     var context: HashMap<String, Any> = LinkedHashMap<String, Any>()
     var output: HashMap<String, Any> = LinkedHashMap<String, Any>()
 
-    var required: List<String>? = null
+    var required: List<String>? = LinkedList()
     var startTime: Date? = null
     var endTime: Date? = null
     var status: ExecutionStatus = ExecutionStatus.NOT_STARTED
