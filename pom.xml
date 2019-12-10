@@ -129,6 +129,24 @@
         </dependency>
 
         <dependency>
+            <groupId>de.huxhorn.sulky</groupId>
+            <artifactId>de.huxhorn.sulky.ulid</artifactId>
+            <version>8.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.spinnaker.kork</groupId>
+            <artifactId>kork-core</artifactId>
+            <scope>runtime</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.servlet</groupId>
+                    <artifactId>servlet-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-kotlin</artifactId>
             <version>2.10.1</version>
@@ -144,9 +162,28 @@
             </dependency>
             <dependency>
                 <groupId>com.netflix.spinnaker.kork</groupId>
-                <artifactId>kork-sql</artifactId>
-                <version>6.7.1</version>
+                <artifactId>kork-core</artifactId>
+                <version>6.21.0</version>
+                <scope>runtime</scope>
             </dependency>
+<!--            <dependency>-->
+<!--                <groupId>com.netflix.spinnaker.kork</groupId>-->
+<!--                <artifactId>kork-web</artifactId>-->
+<!--                <version>6.21.0</version>-->
+<!--                <scope>runtime</scope>-->
+<!--            </dependency>-->
+            <dependency>
+                <groupId>com.netflix.spinnaker.kork</groupId>
+                <artifactId>kork-exceptions</artifactId>
+                <version>6.21.0</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.netflix.spinnaker.kork</groupId>
+                <artifactId>kork-sql</artifactId>
+                <version>6.21.0</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

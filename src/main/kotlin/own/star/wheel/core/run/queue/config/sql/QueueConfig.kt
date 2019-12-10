@@ -1,4 +1,4 @@
-package own.star.wheel.core.run.queue
+package own.star.wheel.core.run.queue.config.sql
 
 import com.alibaba.service.keep.provider.queue.DumbDeadMsgCb
 import com.alibaba.service.keep.provider.queue.EnabledActivator
@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import own.star.wheel.core.run.queue.MutableClock
 import own.star.wheel.core.run.queue.config.SqlRetryProperties
 import own.star.wheel.core.run.queue.sql.SqlQueue
 import java.time.Duration
@@ -43,6 +44,11 @@ open class QueueConfig {
         }
 
 
+    /**
+     * 这是在干嘛, 为什么要引入 object
+     * activeCount 和 maximumPoolSize 是可见的嘛
+     *
+     */
     @Bean
     open fun queueExecutor(messageHandlerPool: ThreadPoolTaskExecutor) =
         object : QueueExecutor<ThreadPoolTaskExecutor>(messageHandlerPool) {

@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.ComponentScan
+import org.springframework.scheduling.annotation.EnableScheduling
 
 /**
  * @author xinsheng
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.ComponentScan
 
 @SpringBootApplication(scanBasePackages = ["own.star.wheel.core"])
 @EnableConfigurationProperties
+@EnableScheduling
 open class Application
 
 fun main(args: Array<String>) {

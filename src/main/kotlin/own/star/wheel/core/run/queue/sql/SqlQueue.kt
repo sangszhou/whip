@@ -25,6 +25,7 @@ import com.netflix.spinnaker.q.metrics.QueueState
 import com.netflix.spinnaker.q.metrics.RetryPolled
 import com.netflix.spinnaker.q.metrics.fire
 import com.netflix.spinnaker.q.migration.SerializationMigrator
+import de.huxhorn.sulky.ulid.ULID
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import io.vavr.control.Try
@@ -51,12 +52,10 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.TemporalAmount
 import java.util.Optional
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.Exception
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.random.Random
 import kotlin.random.Random.Default.nextLong
 
 @KotlinOpen
@@ -72,7 +71,8 @@ class SqlQueue(
     override val deadMessageHandlers: List<DeadMessageCallback>,
     override val canPollMany: Boolean = true,
     override val publisher: EventPublisher,
-    private val sqlRetryProperties: SqlRetryProperties
+    private val sqlRetryProperties: SqlRetryProperties,
+    private val ULID: ULID = ULID()
 ) : MonitorableQueue {
 
     companion object {
@@ -124,7 +124,7 @@ class SqlQueue(
 
     init {
         log.info("Configured $javaClass queue: $queueName")
-        initTables()
+//        initTables()
     }
 
     override fun readState(): QueueState {
@@ -209,6 +209,8 @@ class SqlQueue(
          * Selects the primary key ulid's of up to ([maxMessages] * 3) ready and unlocked messages,
          * sorted by delivery time.
          *
+         *
+         * 另外一种方案是按照 lock contention 的方式来搞
          * To minimize lock contention, this is a non-locking read. The id's returned may be
          * locked or removed by another instance before we can acquire them. We read more id's
          * than [maxMessages] and shuffle them to decrease the likelihood that multiple instances
@@ -285,7 +287,7 @@ class SqlQueue(
             }
 
             val lockedMessages = mutableListOf<LockedMessage>()
-            var ulid = UUID.randomUUID().toString()
+            var ulid = ULID.nextValue()
 
             while (rs.next()) {
                 val fingerprint = rs.getString("fingerprint")
@@ -356,8 +358,7 @@ class SqlQueue(
                         .apply {
                             lockedMessages.forEach {
                                 values(ulid.toString(), it.fingerprint, it.expiry)
-//                                ulid = ULID.nextMonotonicValue(ulid)
-                                ulid = UUID.randomUUID().toString()
+                                ulid = ULID.nextMonotonicValue(ulid)
                             }
                         }
                         .onDuplicateKeyUpdate()
@@ -394,8 +395,7 @@ class SqlQueue(
 
     override fun push(message: Message, delay: TemporalAmount) {
         val fingerprint = message.hashV2()
-//        val ulid = ULID.nextValue()
-        val ulid = UUID.randomUUID().toString()
+        val ulid = ULID.nextValue()
         val deliveryTime = atTime(delay)
 
         message.setAttribute(
@@ -417,7 +417,7 @@ class SqlQueue(
                     .execute()
 
                 txn.insertInto(queueTable)
-                    .set(idField, UUID.randomUUID().toString())
+                    .set(idField, ULID.nextMonotonicValue(ulid).toString())
                     .set(fingerprintField, fingerprint)
                     .set(deliveryField, deliveryTime)
                     .set(lockedField, "0")
@@ -489,7 +489,7 @@ class SqlQueue(
     private fun expireStaleLocks() {
         val now = clock.instant().toEpochMilli()
         val minMs = now.minus(TimeUnit.SECONDS.toMillis(lockTtlSeconds.toLong()))
-        val minUlid = Random.nextLong(minMs).toString()
+        val minUlid = ULID.nextValue(minMs).toString()
 
         val rs = withRetry(RetryCategory.READ) {
             jooq.select(idField, fingerprintField, deliveryField, lockedField)
@@ -502,7 +502,7 @@ class SqlQueue(
                 .intoResultSet()
         }
 
-        var ulid = UUID.randomUUID().toString()
+        var ulid = ULID.nextValue()
 
         while (rs.next()) {
             val id = rs.getString("id")
@@ -533,8 +533,8 @@ class SqlQueue(
 
                 if (deleted == 1) {
                     log.info("releasing stale lock for fingerprint: $fingerprint")
-//                    ulid = ULID.nextMonotonicValue(ulid)
-                    ulid = UUID.randomUUID().toString()
+                    ulid = ULID.nextMonotonicValue(ulid)
+
                     /**
                      * Re-insert with a fresh ulid and for immediate delivery
                      */
@@ -619,7 +619,7 @@ class SqlQueue(
                     log.warn("Retrying message $fingerprint after $acks ack attempts")
 
                     txn.insertInto(queueTable)
-                        .set(idField, UUID.randomUUID().toString())
+                        .set(idField, ULID.nextValue().toString())
                         .set(fingerprintField, fingerprint)
                         .set(deliveryField, atTime(lockTtlDuration))
                         .set(lockedField, "0")

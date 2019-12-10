@@ -10,8 +10,8 @@ import javax.validation.constraints.Positive
  * @author xinsheng
  * @date 2019/12/06
  */
-@ConfigurationProperties("keiko.queue.sql")
-@Validated
+//@ConfigurationProperties("queue.sql")
+//@Validated
 class SqlQueueProperties {
     /**
      * Enables use of the SqlQueue implementation, disabling RedisQueue.
