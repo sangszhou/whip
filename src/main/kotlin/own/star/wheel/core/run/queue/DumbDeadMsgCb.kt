@@ -1,4 +1,4 @@
-package com.alibaba.service.keep.provider.queue
+package own.star.wheel.core.run.queue
 
 import com.netflix.spinnaker.q.DeadMessageCallback
 import com.netflix.spinnaker.q.Message

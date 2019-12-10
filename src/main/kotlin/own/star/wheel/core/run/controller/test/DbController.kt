@@ -13,6 +13,7 @@ import own.star.wheel.core.run.dao.mysql.PipelineTemplateDao
 import own.star.wheel.core.run.model.Execution
 import own.star.wheel.core.run.model.ExecutionStatus
 import own.star.wheel.core.run.model.PipelineTemplate
+import own.star.wheel.core.run.service.ExecutionLauncher
 import java.sql.Time
 import java.util.Date
 import java.util.UUID
@@ -35,6 +36,9 @@ class DbController {
     lateinit var pipelineTemplateDao: PipelineTemplateDao
     @Autowired
     lateinit var mapper: ObjectMapper
+    @Autowired
+    lateinit var executionLauncher: ExecutionLauncher
+
 
     @PostMapping("/pipeline/save")
     fun upsertPipeline(@RequestBody template: PipelineTemplate): String {
@@ -66,35 +70,13 @@ class DbController {
      * 包括参数填充和一些其他的东西
      */
     @PostMapping("/pipeline/trigger")
-    fun triggerExecution(@RequestParam("pipelineTemplateId") pipelineTemplateId: String,
+    fun triggerExecution(@RequestParam("tmpId") tmpId: String,
                          @RequestBody context: Map<String, String>): String {
-        log.info("trigger execution with ${pipelineTemplateId}, context: ${context}")
+        log.info("trigger execution with ${tmpId}, context: ${context}")
 
         try {
-            val pipelineTemplate = pipelineTemplateDao.retrievePipelineTemplate(pipelineTemplateId)
-
-            if (pipelineTemplate == null) {
-                return "not found"
-            }
-
-            val execution = Execution()
-            execution.id = UUID.randomUUID().toString()
-            execution.templateId = pipelineTemplate.id
-            execution.name = pipelineTemplate.name
-            execution.startTime = Date()
-            execution.status = ExecutionStatus.NOT_STARTED
-            execution.stages = pipelineTemplate.stages
-
-            // 别忘记了 对于 stage 的初始化操作
-            execution.stages?.forEach {
-                it.execution = execution
-                it.instanceId = UUID.randomUUID().toString()
-                it.status = ExecutionStatus.NOT_STARTED
-            }
-            log.info("execution data: ${execution}")
-
-            pipelineTemplateDao.upsertExecution(execution, true)
-            return execution.id
+            executionLauncher.start(tmpId, context)
+            return "success"
         } catch (exp: java.lang.Exception) {
             log.error("failed to save data to db", exp)
             return exp.message.toString()

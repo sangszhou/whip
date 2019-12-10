@@ -1,5 +1,5 @@
-package com.alibaba.service.keep.model
-
+package own.star.wheel.core.run.model
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.netflix.spinnaker.q.Message
 
 
@@ -8,19 +8,8 @@ import com.netflix.spinnaker.q.Message
  * @date 2019/11/12
  */
 
-class RunTask() : Message() {
-
-    constructor(executionId: String, stageId: String, taskId: String, taskType: String):this(){
-        this.executionId = executionId
-        this.stageId = stageId
-        this.taskId = taskId
-        this.taskType = taskType
-    }
-
-
-    lateinit var taskId: String
-    lateinit var stageId: String
-    lateinit var executionId: String
-    lateinit var taskType: String
-
-}
+@JsonTypeName("runTask")
+data class RunTask(val executionId: String,
+              val stageId: String,
+              val taskId: String,
+              val taskType: String) : Message()

@@ -1,6 +1,5 @@
 package own.star.wheel.core.run.dao.mysql
 
-import com.alibaba.service.keep.model.Stage
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.jooq.DSLContext
@@ -9,6 +8,7 @@ import org.jooq.Record
 import org.jooq.Table
 import org.jooq.exception.SQLDialectNotSupportedException
 import org.jooq.impl.DSL
+import org.jooq.impl.DSL.all
 import org.jooq.impl.DSL.field
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -18,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController
 import own.star.wheel.core.run.model.Execution
 import own.star.wheel.core.run.model.ExecutionStatus
 import own.star.wheel.core.run.model.PipelineTemplate
+import own.star.wheel.core.run.model.Stage
 import java.lang.IllegalArgumentException
 import java.lang.System.currentTimeMillis
 import java.sql.ResultSet
+import java.util.Arrays
 import java.util.Date
 import java.util.LinkedList
 import javax.annotation.PostConstruct
@@ -69,35 +71,46 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
      * 获取所有的 stage 和 execution instance 信息
      * execution 是 pipeline 的一次运行
      */
-    fun retrievePipelineExe(instanceId: String): Execution {
+    fun retrieveExecution(instanceId: String): Execution {
         val pipelineInstanceTbl = DSL.table(pipelineInstanceTable)
-        val stageInstanceTbl = DSL.table(stage)
 
         // 获取 stage instance 信息
-        val resultSet = dslContext.select(field("*"))
+        val resultSet = dslContext
+            .select(
+                field("id"), field("name"),
+                field("template_id"), field("status"),
+                field("start_time"), field("end_time")
+            )
             .from(pipelineInstanceTbl)
             .where(field("id").eq(instanceId))
             .fetch().intoResultSet()
 
         val execution = mapResultToExecution(resultSet)
-        val stageList = retrieveExecutionStage(instanceId)
+        val stageList = retrieveExecutionStage(execution!!)
+        log.info("stage list size ${stageList.size}")
         execution!!.stages = stageList
 
         return execution
     }
 
-    fun retrieveExecutionStage(exeId: String): List<Stage> {
+    fun retrieveExecutionStage(execution: Execution): List<Stage> {
         val stageInstanceTbl = DSL.table(stage)
 
-        val resultSet = dslContext.select(field("*"))
+        val resultSet = dslContext.select(
+            field("id"), field("instance_id"), field("ref_id"), field("type"),
+            field("output"), field("context"), field("required"), field("output"),
+            field("name"),
+            field("start_time"), field("end_time"), field("status"), field("execution_id")
+        )
             .from(stageInstanceTbl)
-            .where(field("execution_id").eq(exeId))
+            .where(field("execution_id").eq(execution.id))
             .fetch().intoResultSet()
 
         val listStage = LinkedList<Stage>()
 
         while (resultSet.next()) {
             val stage = mapResultToStage(resultSet)
+            stage?.execution = execution
             stage?.let { listStage.add(it) }
         }
 
@@ -106,44 +119,58 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
 
     fun retrieveStage(instanceId: String): Stage? {
         val stageInstanceTbl = DSL.table(stage)
-        val resultSet = dslContext.select(field("*"))
+        val resultSet = dslContext.select(
+            field("id"), field("instance_id"), field("ref_id"), field("type"),
+            field("execution_id"), field("name"),
+            field("output"), field("context"), field("required"), field("output"),
+            field("start_time"), field("end_time"), field("status")
+        )
             .from(stageInstanceTbl)
             .where(field("id").eq(instanceId))
             .fetch().intoResultSet()
 
-        return mapResultToStage(resultSet)
+        if (resultSet.next()) {
+            return mapResultToStage(resultSet)
+        }
+
+        return null
     }
 
     fun mapResultToExecution(resultSet: ResultSet): Execution? {
         if (resultSet.next()) {
             val execution = Execution()
-            execution.id = resultSet.getString("")
+
+            execution.id = resultSet.getString("id")
+            execution.name = resultSet.getString("name")
             execution.templateId = resultSet.getString("template_id")
             execution.status = ExecutionStatus.valueOf(resultSet.getString("status"))
-            execution.startTime = resultSet.getTime("start_time")
-            execution.endTime = resultSet.getTime("end_time")
+            execution.startTime = resultSet.getDate("start_time")
+            execution.endTime = resultSet.getDate("end_time")
 
             return execution
         }
+
         return null
     }
 
     fun mapResultToStage(resultSet: ResultSet): Stage? {
-        if (resultSet.next()) {
-            val stage = Stage()
-            stage.id = resultSet.getString("id")
-            stage.instanceId = resultSet.getString("instance_id")
-            stage.output = mapper.readValue(resultSet.getString("output"))
-            stage.context = mapper.readValue(resultSet.getString("context"))
-            stage.required = resultSet.getString("required").split(",").toList()
-            stage.startTime = resultSet.getTime("start_time")
-            stage.endTime = resultSet.getTime("end_time")
-            stage.status = ExecutionStatus.valueOf(resultSet.getString("status"))
+        val stage = Stage()
+        stage.id = resultSet.getString("id")
+        stage.refId = resultSet.getString("ref_id")
+        stage.type = resultSet.getString("type")
+        stage.executionId = resultSet.getString("execution_id")
+        stage.instanceId = resultSet.getString("instance_id")
+        stage.name = resultSet.getString("name")
+        resultSet.getString("output")?.let {  stage.output = mapper.readValue(it)}
+        resultSet.getString("context")?.let { stage.context = mapper.readValue(it) }
 
-            return stage
-        } else {
-            return null
-        }
+        stage.required = ArrayList()
+        resultSet.getString("required")?.let{stage.required = it.split(",").toList()}
+
+        stage.startTime = resultSet.getDate("start_time")
+        resultSet.getDate("end_time")?.let { stage.endTime = it }
+        stage.status = ExecutionStatus.valueOf(resultSet.getString("status"))
+        return stage
     }
 
     /**
@@ -154,24 +181,23 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         val stageInstanceTbl = DSL.table(stage)
 
         val stageData = execution.stages
-//        execution.stages = null
-
         val insertPairs = mapOf(
             field("id") to execution.id,
             field("template_id") to execution.templateId,
             field("start_time") to execution.startTime,
             field("name") to execution.name,
-            field("status") to ExecutionStatus.NOT_STARTED.toString())
+            field("status") to ExecutionStatus.NOT_STARTED.name
+        )
 
         /**
          * 如果 end_time 没有设置会怎样呢
          */
         val updatePairs = mapOf(
             DSL.field("end_time") to execution.endTime,
-            DSL.field("status") to execution.status
+            DSL.field("status") to execution.status.name
         )
 
-        upsert(dslContext, pipelineInstanceTbl, insertPairs, updatePairs, execution.id!!)
+        upsert(dslContext, pipelineInstanceTbl, insertPairs, updatePairs, execution.id)
 
         // 插入到 stage 中, 不需要考虑 update stage 的情况
         if (!storeStage) {
@@ -202,13 +228,12 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             field("execution_id") to stageDef.executionId,
             field("type") to stageDef.type,
             field("name") to stageDef.name,
-
             field("execution_id") to stageDef.execution!!.id,
             field("context") to mapper.writeValueAsString(stageDef.context),
             field("output") to mapper.writeValueAsString(stageDef.output),
             field("start_time") to stageDef.startTime,
             field("status") to stageDef.status.name
-            )
+        )
 
         val updatePair = mapOf(
             field("ref_id") to stageDef.refId,
@@ -238,7 +263,8 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
             field("gmt_create") to Date(),
             field("gmt_modified") to Date(),
             field("trigger_interval") to template.triggerInterval,
-            field("content") to content)
+            field("content") to content
+        )
 
         log.info("insert pairs: ${insertPairs}")
 
@@ -251,7 +277,8 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
 
         log.info("update pairs: ${updatePairs}")
 
-        upsert(dslContext,
+        upsert(
+            dslContext,
             table,
             insertPairs,
             updatePairs,
@@ -280,7 +307,10 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
         table: Table<Record>,
         insertPairs: Map<Field<Any?>, Any?>,
         updatePairs: Map<Field<Any>, Any?>,
-        updateId: String) {
+        updateId: String
+    ) {
+
+        log.info("upsert insert pair: ${insertPairs}, update pair: ${updatePairs}")
         // MySQL & PG support upsert concepts. A nice little efficiency here, we
         // can avoid a network call if the dialect supports it, otherwise we need
         // to do a select for update first.
@@ -293,13 +323,15 @@ class PipelineTemplateDao(val dslContext: DSLContext, val mapper: ObjectMapper) 
                 .set(updatePairs)
                 .execute()
         } catch (e: SQLDialectNotSupportedException) {
-            log.debug("Falling back to primitive upsert logic: ${e.message}")
+            log.info("Falling back to primitive upsert logic: ${e.message}")
             val exists = ctx.fetchExists(ctx.select().from(table).where(DSL.field("id").eq(updateId)).forUpdate())
             if (exists) {
                 ctx.update(table).set(updatePairs).where(DSL.field("id").eq(updateId)).execute()
             } else {
                 ctx.insertInto(table).columns(insertPairs.keys).values(insertPairs.values).execute()
             }
+        } catch (e: Exception) {
+            log.error("upsert exception", e)
         }
     }
 }

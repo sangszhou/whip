@@ -1,7 +1,5 @@
 package own.star.wheel.core.run.queue.config.sql
 
-import com.alibaba.service.keep.provider.queue.DumbDeadMsgCb
-import com.alibaba.service.keep.provider.queue.EnabledActivator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.config.SqlQueueConfiguration
 import com.netflix.spinnaker.q.Activator
@@ -19,6 +17,8 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import own.star.wheel.core.run.queue.DumbDeadMsgCb
+import own.star.wheel.core.run.queue.EnabledActivator
 import own.star.wheel.core.run.queue.MutableClock
 import own.star.wheel.core.run.queue.config.SqlRetryProperties
 import own.star.wheel.core.run.queue.sql.SqlQueue

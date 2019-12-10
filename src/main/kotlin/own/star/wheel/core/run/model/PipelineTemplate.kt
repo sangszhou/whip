@@ -1,6 +1,5 @@
 package own.star.wheel.core.run.model
 
-import com.alibaba.service.keep.model.Stage
 import java.util.ArrayList
 
 class PipelineTemplate {

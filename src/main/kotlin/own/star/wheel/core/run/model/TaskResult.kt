@@ -1,5 +1,4 @@
-package com.alibaba.service.keep.model
-
+package own.star.wheel.core.run.model
 import own.star.wheel.core.run.model.ExecutionStatus
 
 
@@ -7,12 +6,12 @@ import own.star.wheel.core.run.model.ExecutionStatus
  * @author xinsheng
  * @date 2019/11/12
  */
-open class TaskResult() {
+open class TaskResult(var status: ExecutionStatus) {
 
-    constructor(status: ExecutionStatus): this() {
+    constructor(status: ExecutionStatus, outputs: HashMap<String, *>): this(status) {
         this.status = status
+        this.outputs = outputs
     }
 
-    lateinit var status: ExecutionStatus
-    lateinit var outputs: HashMap<String, *>
+    var outputs: HashMap<String, *>? = null
 }

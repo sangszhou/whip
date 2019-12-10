@@ -1,5 +1,5 @@
-package com.alibaba.service.keep.model
-
+package own.star.wheel.core.run.model
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.netflix.spinnaker.q.Message
 
 /**
@@ -7,14 +7,6 @@ import com.netflix.spinnaker.q.Message
  * @date 2019/11/12
  */
 
-open class StartStage() : Message() {
-
-//    constructor()
-    constructor(executionId: String, stageId: String):this(){
-        this.executionId = executionId
-        this.stageId = stageId
-    }
-
-    lateinit var executionId: String
-    lateinit var stageId: String
-}
+@JsonTypeName("startStage")
+data class StartStage(val executionId: String,
+                      val stageId: String) : Message()

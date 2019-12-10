@@ -1,16 +1,10 @@
-package com.alibaba.service.keep.model
-
+package own.star.wheel.core.run.model
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.netflix.spinnaker.q.Message
 
 /**
  * @author xinsheng
  * @date 2019/11/12
  */
-class StartExecution(): Message() {
-
-    constructor(executionId: String):this(){
-        this.executionId = executionId
-    }
-
-    lateinit var executionId: String
-}
+@JsonTypeName("startExecution")
+data class StartExecution(val executionId: String): Message()
