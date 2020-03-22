@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:mysql://30.1.72.128:3306/whip?useSSL=false&useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true
     username: root
-    password: mypass123
+    password: myql123
   liquibase:
     enabled: false
 
